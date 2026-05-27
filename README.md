@@ -1,12 +1,18 @@
 <p align="center">
-  <img src="assets/cursor-qa-header.jpeg" alt="Cursor QA header" width="100%">
+  <img src="assets/cursor-qa-header.jpeg" alt="Cursor Orchestrator header" width="100%">
 </p>
 
-# Cursor QA
+# Cursor Orchestrator
 
-`cursor-qa` packages a Codex skill and a tmux-backed Cursor Agent CLI for fast QA delegation.
+`cursor-orchestrator` packages a skill and a tmux-backed Cursor Agent CLI for commanding Cursor Composer subagents. It's the same base tech as a Codex or Opus orchestrator - spawn a subagent, drive its turns, read its output - pointed at Cursor Composer 2.5 Fast.
 
-Codex writes a focused QA brief, Cursor Composer 2.5 Fast runs it through `browser-harness`, and the result comes back as a report with verdict, coverage, evidence, failures, reproduction notes, and retest guidance.
+One engine, three modes:
+
+- **Research** - read-only codebase exploration, answers with file:line citations (`--ask` / `--plan`)
+- **Implementation** - scoped build / edit work, verified, with a diff report (`agent`)
+- **QA** - browser-harness E2E testing, returns a PASS/FAIL report with evidence (`--browser-harness`)
+
+The skill loads the matching mode reference on demand, so a plain invoke stays lean and "QA" / "research" / "implement" pulls in just that mode's contract.
 
 ## Install
 
@@ -15,14 +21,11 @@ bun install
 bun link
 ```
 
-This exposes:
+This exposes the orchestration CLI:
 
 ```bash
-cursor-agent
-cursor-qa
+cursor-orch
 ```
-
-Both commands run the same CLI. `cursor-agent` is the orchestration command used by the skill.
 
 ## Requirements
 
@@ -30,46 +33,49 @@ Both commands run the same CLI. `cursor-agent` is the orchestration command used
 - tmux
 - Cursor Agent CLI available as `agent`
 - Cursor CLI authenticated with access to `composer-2.5-fast`
-- `browser-harness` available on PATH for browser QA work
+- `browser-harness` available on PATH (QA mode only)
 
 ## Quick Start
 
-When running from Codex, approve/escalate `cursor-agent` commands. Cursor needs
-Keychain access for auth, and browser-harness QA needs localhost CDP access.
+Pick a mode and write a bounded brief. When running from Codex/Claude, approve/escalate `cursor-orch` commands - Cursor needs Keychain access for auth, and browser-harness QA needs localhost CDP access.
 
 ```bash
-cursor-agent health
-cursor-agent start "Goal: QA http://localhost:3000 with browser-harness.
+# Research (read-only)
+cursor-orch start "Goal: explain how auth tokens flow login -> API client. Read-only, cite file:line." \
+  --dir . --ask --map --force
 
-Success means:
-- The page loads
-- The primary action works
-- The report includes RESULT, TARGET, COVERAGE, EVIDENCE, FAILURES, REPRODUCTION, RETEST NOTES
+# Implementation (scoped build)
+cursor-orch start "Goal: add a --json flag to the report command. Verify with jq. Don't touch other commands." \
+  --dir . --map --force
 
-Stop when: You return one PASS or FAIL report." --dir . --force
-cursor-agent await-turn <jobId>
-cursor-agent capture <jobId> 220 --clean
+# QA (browser-harness)
+cursor-orch start "Goal: QA http://localhost:3000 with browser-harness. Return RESULT/COVERAGE/EVIDENCE/FAILURES." \
+  --dir . --browser-harness --force
+
+# Then, for any mode:
+cursor-orch await-turn <jobId>
+cursor-orch capture <jobId> 220 --clean
 ```
 
-For browser-harness jobs, `cursor-agent` automatically runs Cursor Agent with
-`--sandbox disabled` unless you set `--sandbox` explicitly. This mirrors the
-browser-harness requirement: sandboxed tool calls can block localhost CDP and
-turn a healthy Chrome into a silent or misleading failure.
+For browser-harness jobs, `cursor-orch` automatically runs Cursor Agent with `--sandbox disabled` unless you set `--sandbox` explicitly. This mirrors the browser-harness requirement: sandboxed tool calls can block localhost CDP and turn a healthy Chrome into a silent or misleading failure.
 
 ## Skill
 
-The Codex skill lives at:
+The skill lives at:
 
 ```text
-SKILL.md
+SKILL.md                       # general orchestration doctrine + mode router
+references/research.md         # loaded on "research"
+references/implementation.md   # loaded on "implement / build"
+references/qa.md               # loaded on "QA / test / browser"
 agents/openai.yaml
 ```
 
-Install it into Codex by copying this repository folder to your skills directory, or copy `SKILL.md` and `agents/openai.yaml` into a `cursor-qa` skill folder.
+Install it into Codex by copying this repository folder to your skills directory, or copy `SKILL.md`, `references/`, and `agents/openai.yaml` into a `cursor-orchestrator` skill folder.
 
 ## Cursor Plugin Payload
 
-The browser-harness Cursor plugin payload lives at:
+The browser-harness Cursor plugin payload (QA mode) lives at:
 
 ```text
 cursor-plugin/browser-harness/

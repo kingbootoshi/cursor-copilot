@@ -22,7 +22,7 @@ export const config = {
   defaultMode: (process.env.CURSOR_AGENT_MODE ?? "agent") as AgentMode,
   defaultTimeoutMinutes: Number(process.env.CURSOR_AGENT_TIMEOUT_MINUTES ?? "45"),
   jobsListLimit: Number(process.env.CURSOR_AGENT_JOBS_LIMIT ?? "20"),
-  tmuxPrefix: process.env.CURSOR_AGENT_TMUX_PREFIX ?? "cursor-agent",
+  tmuxPrefix: process.env.CURSOR_AGENT_TMUX_PREFIX ?? "cursor-orch",
   agentPath: resolveExecutable(process.env.CURSOR_AGENT_AGENT_PATH ?? "agent"),
   allowBrowserHarnessSandbox: process.env.CURSOR_AGENT_ALLOW_BROWSER_HARNESS_SANDBOX === "1",
   browserHarnessSkillPath:

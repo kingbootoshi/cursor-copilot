@@ -85,7 +85,7 @@ function buildPreflightMessage(input: {
     return [
       "Cursor CLI auth is blocked by the command sandbox.",
       `Raw auth error: ${input.auth.combined}`,
-      "Run cursor-agent as an approved/escalated Codex command so Cursor can read Keychain auth and browser-harness can reach localhost CDP."
+      "Run cursor-orch as an approved/escalated Codex command so Cursor can read Keychain auth and browser-harness can reach localhost CDP."
     ].join("\n");
   }
   if (input.auth.status !== 0) return `Cursor CLI auth failed: ${input.auth.combined || "agent status failed"}`;

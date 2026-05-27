@@ -1,135 +1,123 @@
 ---
-name: cursor-qa
-description: Delegate QA and fast browser-harness E2E testing to Cursor Composer 2.5 Fast through the local cursor-agent tmux wrapper. Use when Codex should write a test brief, ask Cursor to exercise a UI or browser workflow, and receive a structured QA report with evidence, failures, reproduction notes, and retest status.
+name: cursor-orchestrator
+description: Spawn and command Cursor Composer subagents through the local cursor-orch tmux wrapper. Cursor Composer 2.5 Fast is a third subagent army alongside Codex and Opus - fast, cheap, good at bounded scoped work. Use when you want to delegate research (read-only exploration), implementation (scoped build/edit), or QA (browser-harness E2E testing) to Cursor while keeping your own context focused. On invocation pick a MODE - read references/research.md, references/implementation.md, or references/qa.md based on the task. When the user says "QA", "test", or "browser", load references/qa.md. When the user says "research", "explore", or "investigate", load references/research.md. When the user says "implement", "build", or "fix", load references/implementation.md.
+triggers:
+  - cursor-orchestrator
+  - spawn cursor
+  - use cursor
+  - delegate to cursor
+  - cursor agent
+  - cursor subagent
+  - cursor qa
+  - cursor research
+  - cursor implement
 ---
 
-# Cursor QA
+# Cursor Orchestrator
 
-Use `cursor-agent` to send fast QA work to Cursor Composer 2.5 Fast while Codex keeps implementation context focused.
+Cursor Composer 2.5 Fast is a subagent army you command through the `cursor-orch` tmux wrapper. Spawn a job, drive its turns, read its output, bring back the result. Same base tech as codex-orchestrator and opus-agent-orchestrator - a different model with different strengths.
 
-## Outcome
+## The Command Structure
 
-Goal: Turn a development change into a focused QA brief, run it through Cursor with browser-harness, and bring back a report Codex can act on.
-
-Success means:
-- Codex gives Cursor a bounded test brief with target URL, flows, expected behavior, and report fields.
-- Cursor uses browser-harness for browser interaction, visible verification, screenshots or page state, and reproduction notes.
-- Cursor returns a QA report with verdict, coverage, failures, evidence, and retest instructions.
-
-Stop when: Cursor returns a report that lets Codex fix a concrete issue, request a retest, or record a passing QA result.
-
-## Standard Loop
-
-Start a QA run:
-
-```bash
-cursor-agent start "<qa brief>" --dir /path/to/repo --force
-cursor-agent await-turn <jobId>
-cursor-agent capture <jobId> 220 --clean
-cursor-agent status <jobId>
+```
+SAINT - The King / CEO
+    |
+    +-- CLAUDE / CODEX (Orchestrator) --- General / Commander
+            |-- CURSOR subagent (research)
+            |-- CURSOR subagent (implementation)
+            +-- CURSOR subagent (QA / browser-harness)
 ```
 
-When Codex runs these commands, run them as approved/escalated shell commands. Cursor Agent reads macOS Keychain auth, and browser-harness needs localhost CDP access. A sandboxed Codex command can make `agent status` fail with `SecItemCopyMatching` and can make browser-harness mis-detect Chrome.
+You are the orchestrator. You decide which Cursor subagents to spawn, write their briefs, drive their turns, and synthesize their output. Cursor agents are fast specialists - they do bounded work well and return quickly. You keep the strategic context.
 
-For browser-harness jobs, omit `--sandbox` or pass `--sandbox disabled`. `cursor-agent` automatically chooses Cursor Agent sandbox disabled for browser-harness QA when no explicit sandbox is provided. If a caller passes `--sandbox enabled` with browser-harness, the wrapper fails fast with a clear error instead of launching a silent QA job.
+## When To Reach For Cursor
 
-Retest after a fix:
+- **Fast, bounded, well-scoped work.** Composer 2.5 Fast is quick and cheap. Hand it a tight brief with a clear stopping condition.
+- **Parallel offload.** Spin up a Cursor agent to QA or research while you keep building elsewhere.
+- **Browser QA.** Cursor + browser-harness is the fastest path to real E2E verification (see QA mode).
+- **A second model's eyes.** Cursor sees code differently than Codex or Opus.
+
+Keep deep, high-context implementation on Codex. Use Cursor for scoped sub-tasks with a sharp boundary.
+
+## Pick A Mode
+
+Every run is one of three modes. Read the matching reference file for the brief contract, the right CLI flags, and the output schema:
+
+| Mode | Trigger words | Reference | Cursor mode flag | browser-harness |
+|------|--------------|-----------|------------------|-----------------|
+| **Research** | research, explore, investigate, find, map | `references/research.md` | `--ask` or `--plan` | off |
+| **Implementation** | implement, build, fix, add, refactor | `references/implementation.md` | `agent` (default) | off |
+| **QA** | QA, test, verify, browser, E2E | `references/qa.md` | `agent` | `--browser-harness` |
+
+Default invoke with no mode = read this file, then infer the mode from the task and confirm, or ask which mode fits.
+
+## The Core Loop
+
+Every mode rides the same loop. The brief and flags differ; the mechanics are identical.
 
 ```bash
-cursor-agent send <jobId> "Retest the same brief against the updated app. Report only current failures and changed evidence."
-cursor-agent await-turn <jobId>
-cursor-agent capture <jobId> 220 --clean
+# 1. Start a job (mode-specific flags - see the reference file)
+cursor-orch start "<brief>" --dir /path/to/repo --force
+
+# 2. Wait for the turn to finish
+cursor-orch await-turn <jobId>
+
+# 3. Read the result
+cursor-orch capture <jobId> 220 --clean
+
+# 4. Follow up / retest in the same session
+cursor-orch send <jobId> "<follow-up>"
+cursor-orch await-turn <jobId>
+cursor-orch capture <jobId> 220 --clean
 ```
 
-List running or recent QA jobs:
+List and manage running work:
 
 ```bash
-cursor-agent jobs --json
+cursor-orch jobs --json        # running and recent jobs
+cursor-orch status <jobId>     # one job's full state
+cursor-orch watch <jobId>      # live-tail output
+cursor-orch kill <jobId>       # stop a job
+cursor-orch clean              # archive old jobs, kill orphaned sessions
 ```
 
-## Write The QA Brief
+## Writing The Brief (universal rules)
 
-Build the prompt as a test contract. Name the destination, the exact surfaces to test, and the report schema.
-
-Use this structure:
+Every brief is a contract. Name the destination, the boundary, and the stopping condition. Each mode reference gives a fill-in template.
 
 ```text
-Goal: QA <feature/change> at <URL> with browser-harness.
+Goal: <one sentence - what this run produces>
 
 Success means:
-- <flow 1> reaches <expected state>
-- <flow 2> handles <edge case>
-- <visual/layout requirement> holds at <viewport>
-- The report includes verdict, steps, evidence, failures, and reproduction notes
+- <concrete checkable outcome 1>
+- <concrete checkable outcome 2>
 
-Stop when: The report covers every listed flow once and gives a final PASS or FAIL verdict.
+Stop when: <the exact condition that ends the run>
 
-Use browser-harness:
-- Open a fresh tab with new_tab("<URL>")
-- Verify visible state with screenshot(), page_info(), and focused DOM reads
-- Click and type through the browser like a user
-- Capture evidence after each meaningful action
-
-Return this report:
-RESULT: PASS | FAIL
-TARGET:
-COVERAGE:
-EVIDENCE:
-FAILURES:
-REPRODUCTION:
-RETEST NOTES:
+Return: <the report shape you want back>
 ```
 
-## Browser-Harness Expectations
+Tight boundary + explicit stop condition = a fast agent that returns something you can act on. Vague brief = an agent that wanders.
 
-`cursor-agent` injects browser-harness by default. The Cursor agent receives:
+## Modes, Flags, Sandbox
 
-- The local Cursor plugin at `~/.cursor/plugins/local/browser-harness`.
-- The copied browser-harness skill.
-- The canonical browser-harness usage doc and helper reference.
+- `--force` / `--yolo` force-allows Cursor tool calls. Use it for autonomous runs.
+- `--ask` = read-only Q&A. `--plan` = planning without edits. Default `agent` = full build.
+- `--dir <path>` sets the working repo. Always set it.
+- `--map` injects `docs/CODEBASE_MAP.md` when present - cheap orientation for research and implementation.
+- `--browser-harness` injects the browser-harness skill + plugin. **Opt-in** - only QA mode needs it. When on, the wrapper auto-disables the Cursor sandbox (browser-harness needs localhost CDP).
+- `--dry-run` prints the launch summary and prompt preview without spawning. Use it to check token cost and the assembled prompt.
 
-Ask Cursor to use browser-harness for visible browser work. Ask for screenshots or page state when the report depends on UI evidence.
+## Running From Codex / Claude
 
-## QA Scope Examples
-
-Smoke test a local app:
-
-```bash
-cursor-agent start "Goal: QA the onboarding flow at http://localhost:3000 with browser-harness.
-
-Success means:
-- The landing screen loads without console-visible blocking errors
-- The primary CTA opens onboarding
-- Required fields show validation when submitted empty
-- A valid test profile reaches the final confirmation screen
-
-Stop when: You return one PASS or FAIL report with evidence for each step.
-
-Return RESULT, TARGET, COVERAGE, EVIDENCE, FAILURES, REPRODUCTION, RETEST NOTES." \
-  --dir /path/to/repo --force
-```
-
-Retest a fixed failure:
-
-```bash
-cursor-agent send <jobId> "Retest the failed validation path. Use the same URL and browser-harness flow. Return PASS if the previous failure is gone, otherwise return FAIL with updated reproduction steps."
-```
-
-## Report Triage
-
-Read Cursor's report, then choose the next action:
-
-- Fix implementation bugs when the report includes a reproducible failure.
-- Ask Cursor for one focused retest when evidence is incomplete.
-- Record PASS when the report covers the brief and no failures remain.
-- Broaden QA only when the change surface is larger than the original brief.
+When you run `cursor-orch` commands, run them as approved/escalated shell commands. Cursor Agent reads macOS Keychain auth, and browser-harness needs localhost CDP access. A sandboxed orchestrator command can make `agent status` fail with `SecItemCopyMatching` and can make browser-harness mis-detect Chrome.
 
 ## Health Check
 
 Run this when Cursor, tmux, model access, or browser-harness setup is suspect:
 
 ```bash
-cursor-agent health
+cursor-orch health
 ```
 
-The health check verifies tmux, Cursor auth, `composer-2.5-fast`, browser-harness files, the Cursor plugin, and the `browser-harness` executable. If health reports a Keychain sandbox error, rerun the same command as an approved/escalated Codex shell command before dispatching QA.
+It verifies tmux, Cursor auth, the default model, and (for QA) browser-harness files, the Cursor plugin, and the `browser-harness` executable. If health reports a Keychain sandbox error, rerun it as an approved/escalated command before dispatching work.

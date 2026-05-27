@@ -45,28 +45,28 @@ interface Options {
   pluginDirs: string[];
 }
 
-const HELP = `Cursor Agent - tmux-backed Cursor Composer agents
+const HELP = `Cursor Orchestrator - tmux-backed Cursor Composer subagents
 
 Usage:
-  cursor-agent start "prompt" [options]
-  cursor-agent status <jobId>
-  cursor-agent await-turn <jobId>
-  cursor-agent send <jobId> "message"
-  cursor-agent capture <jobId> [lines] [--clean]
-  cursor-agent output <jobId> [--clean]
-  cursor-agent jobs [--json] [--all]
-  cursor-agent sessions
-  cursor-agent attach <jobId>
-  cursor-agent watch <jobId>
-  cursor-agent kill <jobId>
-  cursor-agent clean
-  cursor-agent health
+  cursor-orch start "prompt" [options]
+  cursor-orch status <jobId>
+  cursor-orch await-turn <jobId>
+  cursor-orch send <jobId> "message"
+  cursor-orch capture <jobId> [lines] [--clean]
+  cursor-orch output <jobId> [--clean]
+  cursor-orch jobs [--json] [--all]
+  cursor-orch sessions
+  cursor-orch attach <jobId>
+  cursor-orch watch <jobId>
+  cursor-orch kill <jobId>
+  cursor-orch clean
+  cursor-orch health
 
 Defaults:
   model: ${config.defaultModel}
   mode: ${config.defaultMode}
-  sandbox: ${config.defaultSandbox} (browser-harness QA auto-uses disabled)
-  browser-harness: enabled
+  sandbox: ${config.defaultSandbox} (browser-harness work auto-uses disabled)
+  browser-harness: opt-in (pass --browser-harness for QA / browser work)
 
 Options:
   -m, --model <model>          Cursor model id
@@ -80,7 +80,8 @@ Options:
   -d, --dir <path>             Working directory
   --map                        Inject docs/CODEBASE_MAP.md when present
   --plugin-dir <path>          Repeatable Cursor --plugin-dir
-  --no-browser-harness         Disable default browser-harness skill/plugin injection
+  --browser-harness            Inject browser-harness skill/plugin (QA / browser work)
+  --no-browser-harness         Force-disable browser-harness injection
   --wait                       Wait for the first turn signal
   --dry-run                    Print launch summary only
   --clean, --strip-ansi        Clean captured terminal output
@@ -106,7 +107,7 @@ function parseArgs(args: string[]): { command: string; positional: string[]; opt
     force: false,
     trust: true,
     approveMcps: false,
-    browserHarness: true,
+    browserHarness: false,
     pluginDirs: []
   };
   const positional: string[] = [];
@@ -144,6 +145,8 @@ function parseArgs(args: string[]): { command: string; positional: string[]; opt
       options.includeMap = true;
     } else if (arg === "--plugin-dir") {
       options.pluginDirs.push(next());
+    } else if (arg === "--browser-harness") {
+      options.browserHarness = true;
     } else if (arg === "--no-browser-harness") {
       options.browserHarness = false;
     } else if (arg === "--dry-run") {
@@ -259,9 +262,9 @@ async function startCommand(positional: string[], options: Options): Promise<num
   console.log(`Browser harness: ${job.browserHarness ? "yes" : "no"}`);
   console.log(`Working dir: ${job.cwd}`);
   console.log(`tmux session: ${job.tmuxSession}`);
-  console.log(`Capture: cursor-agent capture ${job.id} --clean`);
-  console.log(`Await: cursor-agent await-turn ${job.id}`);
-  console.log(`Send: cursor-agent send ${job.id} "message"`);
+  console.log(`Capture: cursor-orch capture ${job.id} --clean`);
+  console.log(`Await: cursor-orch await-turn ${job.id}`);
+  console.log(`Send: cursor-orch send ${job.id} "message"`);
   if (options.wait) return await awaitTurnCommand([job.id]);
   return job.status === "running" ? 0 : 1;
 }
@@ -354,7 +357,7 @@ function jobsCommand(options: Options): number {
 function sessionsCommand(): number {
   const sessions = listSessions();
   if (sessions.length === 0) {
-    console.log("No active cursor-agent sessions");
+    console.log("No active cursor-orch sessions");
     return 0;
   }
   for (const session of sessions) console.log(`${session.name}\tattached=${session.attached ? "yes" : "no"}\t${session.created}`);
@@ -408,7 +411,7 @@ function healthCommand(): number {
   const preflight = checkCursorAgent(config.agentPath, config.defaultModel);
   if (preflight.auth.combined) console.log(`auth: ${preflight.auth.combined}`);
   if (preflight.sandboxBlocked) {
-    console.log("auth guidance: blocked by macOS Keychain sandbox; rerun cursor-agent health as an approved/escalated Codex command.");
+    console.log("auth guidance: blocked by macOS Keychain sandbox; rerun cursor-orch health as an approved/escalated Codex command.");
     console.log(`model ${config.defaultModel}: not checked because auth is sandbox-blocked`);
   } else {
     console.log(`model ${config.defaultModel}: ${preflight.hasModel ? "OK" : "missing"}`);
@@ -429,7 +432,7 @@ function normalizeBrowserHarnessSandbox(options: Options): void {
       [
         "browser-harness QA cannot run with Cursor Agent sandbox enabled.",
         "The harness needs localhost CDP access, and sandboxed Cursor tool calls can mis-detect Chrome and hang or fail.",
-        "Use --sandbox disabled, omit --sandbox so cursor-agent can choose the QA default, or pass --no-browser-harness for non-browser work.",
+        "Use --sandbox disabled, omit --sandbox so cursor-orch can choose the QA default, or pass --no-browser-harness for non-browser work.",
         "Set CURSOR_AGENT_ALLOW_BROWSER_HARNESS_SANDBOX=1 only when intentionally testing sandbox failure behavior."
       ].join("\n")
     );

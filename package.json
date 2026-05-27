@@ -1,11 +1,10 @@
 {
-  "name": "cursor-qa",
-  "version": "0.1.0",
-  "description": "Codex skill and tmux-backed Cursor Agent QA wrapper for Composer 2.5 Fast",
+  "name": "cursor-orchestrator",
+  "version": "0.2.0",
+  "description": "Skill and tmux-backed orchestrator for Cursor Composer subagents - research, implementation, and QA",
   "type": "module",
   "bin": {
-    "cursor-agent": "bin/cursor-agent",
-    "cursor-qa": "bin/cursor-qa"
+    "cursor-orch": "bin/cursor-orch"
   },
   "scripts": {
     "check": "tsc --noEmit",
