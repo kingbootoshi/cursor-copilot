@@ -6,6 +6,8 @@
 
 `cursor-copilot` packages a skill and a tmux-backed Cursor Agent CLI for commanding Cursor Composer subagents. It's the same base tech as a Codex or Opus orchestrator - spawn a subagent, drive its turns, read its output - pointed at Cursor Composer 2.5 Fast.
 
+By default, `cursor-pilot start "..."` launches a live interactive Cursor Agent TUI inside tmux. `capture`, `watch`, and `attach` show the real pane while Cursor works, and `send` types follow-ups into the same session after the current turn is idle. Fresh workspaces are trusted through Cursor's own TUI prompt so unattended runs do not stall at the workspace trust gate. Scripted callers that need the old one-shot JSON behavior can pass `--headless`.
+
 One engine, three modes:
 
 - **Research** - read-only codebase exploration, answers with file:line citations (`--ask` / `--plan`)
@@ -55,6 +57,10 @@ cursor-pilot start "Goal: QA http://localhost:3000 with browser-harness. Return 
 # Then, for any mode:
 cursor-pilot await-turn <jobId>
 cursor-pilot capture <jobId> 220 --clean
+cursor-pilot send <jobId> "Follow up in the same live session"
+
+# Scripted JSON mode
+cursor-pilot start --headless "Return a JSON-friendly one-shot result." --dir . --force
 ```
 
 For browser-harness jobs, `cursor-pilot` automatically runs Cursor Agent with `--sandbox disabled` unless you set `--sandbox` explicitly. This mirrors the browser-harness requirement: sandboxed tool calls can block localhost CDP and turn a healthy Chrome into a silent or misleading failure.

@@ -11,3 +11,6 @@ trash/
 service-token
 coverage/
 dist/
+
+# Codex agent run ledgers (local)
+.agent/

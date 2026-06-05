@@ -67,6 +67,10 @@ export function killSession(sessionName: string): boolean {
 export function sendMessage(sessionName: string, message: string): boolean {
   if (!sessionExists(sessionName)) return false;
   const bufferName = `${sessionName}-${process.pid}`;
+  sendKey(sessionName, "C-c");
+  pauseForTuiInput();
+  sendKey(sessionName, "C-u");
+  pauseForTuiInput();
   const loaded = spawnSync("tmux", ["load-buffer", "-b", bufferName, "-"], {
     input: message,
     stdio: ["pipe", "pipe", "pipe"]
@@ -75,8 +79,22 @@ export function sendMessage(sessionName: string, message: string): boolean {
   const pasted = spawnSync("tmux", ["paste-buffer", "-b", bufferName, "-t", sessionName], { stdio: "pipe" });
   spawnSync("tmux", ["delete-buffer", "-b", bufferName], { stdio: "pipe" });
   if (pasted.status !== 0) return false;
-  spawnSync("tmux", ["send-keys", "-t", sessionName, "Enter"], { stdio: "pipe" });
+  pauseForTuiInput();
+  sendKey(sessionName, "Enter");
   return true;
+}
+
+export function acceptWorkspaceTrust(sessionName: string): boolean {
+  if (!sessionExists(sessionName)) return false;
+  return sendKey(sessionName, "a");
+}
+
+function sendKey(sessionName: string, key: string): boolean {
+  return spawnSync("tmux", ["send-keys", "-t", sessionName, key], { stdio: "pipe" }).status === 0;
+}
+
+function pauseForTuiInput(): void {
+  spawnSync("sleep", ["0.1"], { stdio: "pipe" });
 }
 
 export function capturePane(sessionName: string, lines?: number): string | null {

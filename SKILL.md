@@ -56,19 +56,22 @@ Default invoke with no mode = read this file, then infer the mode from the task 
 Every mode rides the same loop. The brief and flags differ; the mechanics are identical.
 
 ```bash
-# 1. Start a job (mode-specific flags - see the reference file)
+# 1. Start a live interactive job (mode-specific flags - see the reference file)
 cursor-pilot start "<brief>" --dir /path/to/repo --force
 
-# 2. Wait for the turn to finish
+# 2. Wait for the current interactive turn to finish
 cursor-pilot await-turn <jobId>
 
-# 3. Read the result
+# 3. Read the live pane / result
 cursor-pilot capture <jobId> 220 --clean
 
 # 4. Follow up / retest in the same session
 cursor-pilot send <jobId> "<follow-up>"
 cursor-pilot await-turn <jobId>
 cursor-pilot capture <jobId> 220 --clean
+
+# Scripted one-shot JSON mode remains available when needed
+cursor-pilot start --headless "<brief>" --dir /path/to/repo --force
 ```
 
 List and manage running work:
@@ -106,6 +109,8 @@ Tight boundary + explicit stop condition = a fast agent that returns something y
 - `--dir <path>` sets the working repo. Always set it.
 - `--map` injects `docs/CODEBASE_MAP.md` when present - cheap orientation for research and implementation.
 - `--browser-harness` injects the browser-harness skill + plugin. **Opt-in** - only QA mode needs it. When on, the wrapper auto-disables the Cursor sandbox (browser-harness needs localhost CDP).
+- `--headless` uses the old `agent -p --output-format json` launch path for scripted callers. Without it, jobs are live interactive TUI sessions.
+- Interactive jobs auto-accept Cursor's workspace trust prompt for unattended runs instead of hanging at the gate.
 - `--dry-run` prints the launch summary and prompt preview without spawning. Use it to check token cost and the assembled prompt.
 
 ## Running From Codex / Claude

@@ -12,13 +12,21 @@ import { dirname, join, resolve } from "node:path";
 import { config, type AgentMode, type SandboxMode } from "./config.ts";
 import { clearSignalFile, readSignalFile, signalFileExists, writeSignalFile, type TurnEvent } from "./watcher.ts";
 import {
+  acceptWorkspaceTrust,
   capturePane,
   createSession,
   getSessionName,
   killSession,
+  sendMessage,
   sessionExists
 } from "./tmux.ts";
 import { shellQuote } from "./shell.ts";
+import {
+  detectInteractivePaneTurnState,
+  extractCursorResumeSessionId,
+  extractLastAgentMessageFromPane,
+  type JobExecutionMode
+} from "./interactive-tui.ts";
 
 export interface CursorUsage {
   inputTokens?: number;
@@ -35,6 +43,7 @@ export interface Job {
   model: string;
   mode: AgentMode;
   sandbox: SandboxMode;
+  executionMode?: JobExecutionMode;
   force: boolean;
   trust: boolean;
   approveMcps: boolean;
@@ -68,6 +77,7 @@ export interface StartJobOptions {
   browserHarness?: boolean;
   pluginDirs?: readonly string[];
   resumeSessionId?: string;
+  executionMode?: JobExecutionMode;
   jobId?: string;
   appendMessage?: boolean;
 }
@@ -80,6 +90,7 @@ export interface LaunchSpec {
   promptFile: string;
   logFile: string;
   sessionName: string;
+  executionMode?: JobExecutionMode;
 }
 
 export interface JobsJsonOutput {
@@ -91,6 +102,7 @@ export interface JobsJsonOutput {
     model: string;
     mode: AgentMode;
     sandbox: SandboxMode;
+    execution_mode: JobExecutionMode;
     force: boolean;
     browser_harness: boolean;
     cursor_session_id: string | null;
@@ -116,6 +128,8 @@ type CursorResult = {
   usage?: CursorUsage;
   error?: unknown;
 };
+
+const workspaceTrustAcceptTimeoutMs = 30_000;
 
 export function ensureJobsDir(): void {
   mkdirSync(config.jobsDir, { recursive: true });
@@ -195,6 +209,7 @@ export function startJob(options: StartJobOptions): Job {
   const trust = options.trust ?? existing?.trust ?? true;
   const approveMcps = options.approveMcps ?? existing?.approveMcps ?? false;
   const browserHarness = options.browserHarness ?? existing?.browserHarness ?? true;
+  const executionMode = options.executionMode ?? existing?.executionMode ?? "interactive";
   const pluginDirs = [...new Set([...(existing?.pluginDirs ?? []), ...(options.pluginDirs ?? [])])];
   const messages = options.appendMessage && existing ? [...existing.messages, options.prompt] : [options.prompt];
 
@@ -206,6 +221,7 @@ export function startJob(options: StartJobOptions): Job {
     model,
     mode,
     sandbox,
+    executionMode,
     force,
     trust,
     approveMcps,
@@ -228,6 +244,7 @@ export function startJob(options: StartJobOptions): Job {
       model,
       mode,
       sandbox,
+      executionMode,
       force,
       trust,
       approveMcps,
@@ -238,7 +255,8 @@ export function startJob(options: StartJobOptions): Job {
     cwd,
     promptFile: promptPath(id),
     logFile: logPath(id),
-    sessionName: tmuxSession
+    sessionName: tmuxSession,
+    executionMode
   });
 
   const created = createSession({ jobId: id, cwd, logFile: logPath(id), launcherPath: join(import.meta.dir, "launch-cursor-session.ts") });
@@ -261,10 +279,11 @@ function writeLaunchSpec(jobId: string, spec: LaunchSpec): void {
   writeFileSync(launchPath(jobId), JSON.stringify(spec, null, 2));
 }
 
-function buildAgentArgs(input: {
+export function buildAgentArgs(input: {
   model: string;
   mode: AgentMode;
   sandbox: SandboxMode;
+  executionMode: JobExecutionMode;
   force: boolean;
   trust: boolean;
   approveMcps: boolean;
@@ -272,21 +291,14 @@ function buildAgentArgs(input: {
   resumeSessionId?: string;
   cwd: string;
 }): string[] {
-  const args = [
-    "-p",
-    "--model",
-    input.model,
-    "--output-format",
-    "json",
-    "--sandbox",
-    input.sandbox,
-    "--workspace",
-    input.cwd
-  ];
+  const args =
+    input.executionMode === "headless"
+      ? ["-p", "--model", input.model, "--output-format", "json", "--sandbox", input.sandbox, "--workspace", input.cwd]
+      : ["--model", input.model, "--sandbox", input.sandbox, "--workspace", input.cwd];
   if (input.mode !== "agent") args.push("--mode", input.mode);
   if (input.resumeSessionId) args.push("--resume", input.resumeSessionId);
   if (input.force) args.push("--force");
-  if (input.trust) args.push("--trust");
+  if (input.trust && input.executionMode === "headless") args.push("--trust");
   if (input.approveMcps) args.push("--approve-mcps");
   for (const pluginDir of input.pluginDirs) args.push("--plugin-dir", pluginDir);
   return args;
@@ -298,13 +310,17 @@ export function refreshJobStatus(jobId: string): Job | null {
   if ((job.status === "pending" || job.status === "running") && job.tmuxSession && !sessionExists(job.tmuxSession)) {
     const fromDisk = loadJob(jobId) ?? job;
     if (fromDisk.status === "pending" || fromDisk.status === "running") {
-      applyCursorResult(fromDisk, parseCursorResultFromLog(jobId));
-      if (fromDisk.status === "pending" || fromDisk.status === "running") {
-        fromDisk.status = fromDisk.error ? "failed" : "completed";
+      if (getJobExecutionMode(fromDisk) === "interactive") {
+        markInteractiveJobExited(jobId, fromDisk.error ? 1 : 0, fromDisk.error);
+      } else {
+        applyCursorResult(fromDisk, parseCursorResultFromLog(jobId));
+        if (fromDisk.status === "pending" || fromDisk.status === "running") {
+          fromDisk.status = fromDisk.error ? "failed" : "completed";
+        }
+        fromDisk.completedAt = fromDisk.completedAt ?? new Date().toISOString();
+        fromDisk.turnState = "idle";
+        saveJob(fromDisk);
       }
-      fromDisk.completedAt = fromDisk.completedAt ?? new Date().toISOString();
-      fromDisk.turnState = "idle";
-      saveJob(fromDisk);
     }
     return loadJob(jobId);
   }
@@ -349,9 +365,131 @@ export function markJobExited(jobId: string, exitCode: number, error?: string, r
   writeSignalFile(signal);
 }
 
+export async function monitorInteractiveTurns(jobId: string, shouldStop: () => boolean): Promise<void> {
+  await Bun.sleep(1000);
+  let workspaceTrustAcceptedAt: number | null = null;
+  while (!shouldStop()) {
+    const job = loadJob(jobId);
+    if (!job || getJobExecutionMode(job) !== "interactive") return;
+    if (job.status !== "running" && job.status !== "pending") return;
+    const pane = job.tmuxSession ? capturePane(job.tmuxSession) : null;
+    if (pane !== null) {
+      updateCursorSessionIdFromPane(job, pane);
+      const paneState = detectInteractivePaneTurnState(pane);
+      if (paneState === "trust-required") {
+        if (!job.trust) {
+          markInteractiveTrustFailure(jobId, "Workspace trust required, but --no-trust was set");
+          return;
+        }
+        const now = Date.now();
+        if (workspaceTrustAcceptedAt === null && job.tmuxSession) {
+          if (!acceptWorkspaceTrust(job.tmuxSession)) {
+            markInteractiveTrustFailure(jobId, "Workspace trust required, but cursor-pilot could not send the trust key");
+            return;
+          }
+          workspaceTrustAcceptedAt = now;
+        } else if (workspaceTrustAcceptedAt !== null && now - workspaceTrustAcceptedAt > workspaceTrustAcceptTimeoutMs) {
+          markInteractiveTrustFailure(jobId, "Workspace trust prompt did not clear after cursor-pilot accepted it");
+          return;
+        }
+        if (job.turnState !== "working") {
+          job.turnState = "working";
+          saveJob(job);
+        }
+      } else if (paneState === "working" && job.turnState !== "working") {
+        job.turnState = "working";
+        saveJob(job);
+      } else if (paneState === "idle" && job.turnState === "working") {
+        markInteractiveTurnComplete(jobId, pane);
+      }
+    }
+    await Bun.sleep(500);
+  }
+}
+
+function markInteractiveTrustFailure(jobId: string, error: string): void {
+  const job = loadJob(jobId);
+  if (!job) return;
+  if (job.tmuxSession && sessionExists(job.tmuxSession)) killSession(job.tmuxSession);
+  const completedAt = new Date().toISOString();
+  job.status = "failed";
+  job.error = error;
+  job.completedAt = completedAt;
+  job.turnState = "idle";
+  job.lastTurnCompletedAt = completedAt;
+  job.lastAgentMessage = error;
+  saveJob(job);
+  writeSignalFile({
+    event: "StopFailure",
+    jobId,
+    timestamp: completedAt,
+    sessionId: job.cursorSessionId,
+    cwd: job.cwd,
+    model: job.model,
+    lastAgentMessage: error
+  });
+}
+
+export function markInteractiveTurnComplete(jobId: string, paneText: string): void {
+  const job = loadJob(jobId);
+  if (!job || getJobExecutionMode(job) !== "interactive") return;
+  updateCursorSessionIdFromPane(job, paneText);
+  const lastAgentMessage = extractLastAgentMessageFromPane(paneText) || "Cursor turn complete";
+  const completedAt = new Date().toISOString();
+  job.status = "running";
+  job.completedAt = undefined;
+  job.turnState = "idle";
+  job.turnCount = (job.turnCount ?? 0) + 1;
+  job.lastTurnCompletedAt = completedAt;
+  job.lastAgentMessage = truncate(lastAgentMessage, 700);
+  job.result = lastAgentMessage;
+  saveJob(job);
+
+  const signal: TurnEvent = {
+    event: "Stop",
+    jobId,
+    timestamp: completedAt,
+    sessionId: job.cursorSessionId,
+    cwd: job.cwd,
+    model: job.model,
+    lastAgentMessage: job.lastAgentMessage
+  };
+  writeSignalFile(signal);
+}
+
+export function markInteractiveJobExited(jobId: string, exitCode: number, error?: string): void {
+  const job = loadJob(jobId);
+  if (!job) return;
+  const logText = readLogFile(jobId);
+  if (logText) {
+    updateCursorSessionIdFromPane(job, logText);
+    if (job.turnState === "working" && detectInteractivePaneTurnState(logText) === "idle") {
+      saveJob(job);
+      markInteractiveTurnComplete(jobId, logText);
+    }
+  }
+  const latest = loadJob(jobId) ?? job;
+  if (logText) updateCursorSessionIdFromPane(latest, logText);
+  latest.status = exitCode === 0 && !error ? "completed" : "failed";
+  latest.completedAt = new Date().toISOString();
+  latest.turnState = "idle";
+  if (error !== undefined) latest.error = error;
+  saveJob(latest);
+}
+
 export function sendToJob(jobId: string, message: string): boolean {
   const job = refreshJobStatus(jobId);
-  if (!job || !job.cursorSessionId) return false;
+  if (!job) return false;
+  if (getJobExecutionMode(job) === "interactive") {
+    if (job.status !== "running" || job.turnState !== "idle" || !job.tmuxSession || !sessionExists(job.tmuxSession)) return false;
+    clearSignalFile(jobId);
+    if (!sendMessage(job.tmuxSession, message)) return false;
+    const latest = loadJob(jobId) ?? job;
+    latest.turnState = "working";
+    saveJob(latest);
+    return true;
+  }
+  if (!job.cursorSessionId) return false;
   if (job.status === "running" || job.status === "pending") return false;
   startJob({
     jobId,
@@ -366,6 +504,7 @@ export function sendToJob(jobId: string, message: string): boolean {
     browserHarness: job.browserHarness,
     pluginDirs: job.pluginDirs,
     resumeSessionId: job.cursorSessionId,
+    executionMode: "headless",
     appendMessage: true
   });
   return true;
@@ -457,6 +596,7 @@ export function getJobsJson(options: { all?: boolean; limit?: number | null } = 
         model: refreshed.model,
         mode: refreshed.mode,
         sandbox: refreshed.sandbox,
+        execution_mode: getJobExecutionMode(refreshed),
         force: refreshed.force,
         browser_harness: refreshed.browserHarness,
         cursor_session_id: refreshed.cursorSessionId ?? null,
@@ -474,6 +614,10 @@ export function getJobsJson(options: { all?: boolean; limit?: number | null } = 
   };
 }
 
+export function getJobExecutionMode(job: Pick<Job, "executionMode">): JobExecutionMode {
+  return job.executionMode ?? "headless";
+}
+
 function applyCursorResult(job: Job, result: CursorResult | null): void {
   if (!result) return;
   if (typeof result.session_id === "string") job.cursorSessionId = result.session_id;
@@ -485,14 +629,22 @@ function applyCursorResult(job: Job, result: CursorResult | null): void {
   }
 }
 
+function updateCursorSessionIdFromPane(job: Job, paneText: string): void {
+  const sessionId = extractCursorResumeSessionId(paneText);
+  if (sessionId) job.cursorSessionId = sessionId;
+}
+
 function parseCursorResultFromLog(jobId: string): CursorResult | null {
-  let content = "";
+  const content = readLogFile(jobId);
+  return content ? parseCursorResultFromText(content) : null;
+}
+
+function readLogFile(jobId: string): string {
   try {
-    content = readFileSync(logPath(jobId), "utf8");
+    return readFileSync(logPath(jobId), "utf8");
   } catch {
-    return null;
+    return "";
   }
-  return parseCursorResultFromText(content);
 }
 
 function parseCursorResultFromText(content: string): CursorResult | null {

@@ -6,10 +6,12 @@ import { config, isAgentMode, isSandboxMode, sandboxModes, agentModes, type Agen
 import { estimateTokens, loadCodebaseMap } from "./files.ts";
 import { buildBrowserHarnessPrelude, defaultBrowserHarnessPluginDirs } from "./browser-harness.ts";
 import { checkCursorAgent, runCommand } from "./preflight.ts";
+import type { JobExecutionMode } from "./interactive-tui.ts";
 import {
   cleanupOldJobs,
   deleteJob,
   getAttachCommand,
+  getJobExecutionMode,
   getJobFullOutput,
   getJobOutput,
   getJobsJson,
@@ -42,6 +44,7 @@ interface Options {
   trust: boolean;
   approveMcps: boolean;
   browserHarness: boolean;
+  headless: boolean;
   pluginDirs: string[];
 }
 
@@ -63,19 +66,21 @@ Usage:
   cursor-pilot health
 
 Defaults:
+  execution: interactive live TUI (pass --headless for one-shot JSON scripting)
   model: ${config.defaultModel}
   mode: ${config.defaultMode}
   sandbox: ${config.defaultSandbox} (browser-harness work auto-uses disabled)
   browser-harness: opt-in (pass --browser-harness for QA / browser work)
 
 Options:
+  --headless                   Use old one-shot agent -p --output-format json mode
   -m, --model <model>          Cursor model id
   --mode <mode>                ${agentModes.join(", ")}
   --plan                       Shortcut for --mode plan
   --ask                        Shortcut for --mode ask
   --sandbox <mode>             ${sandboxModes.join(", ")}
   --force, --yolo              Force-allow Cursor tool calls
-  --no-trust                   Do not pass --trust
+  --no-trust                   Do not pass --trust in headless mode
   --approve-mcps               Pass --approve-mcps
   -d, --dir <path>             Working directory
   --map                        Inject docs/CODEBASE_MAP.md when present
@@ -88,6 +93,13 @@ Options:
   --json                       JSON output for jobs
   --all                        Include all jobs
   --limit <n>                  Limit jobs shown
+
+Interactive behavior:
+  capture/watch show the live TUI pane while Cursor works.
+  await-turn returns when the TUI returns to the follow-up prompt.
+  send types into the same live session when idle; sends while working are rejected.
+  workspace trust prompts are auto-accepted for unattended interactive runs.
+  --headless keeps the old process-exits-per-turn JSON behavior for scripted callers.
 `;
 
 function parseArgs(args: string[]): { command: string; positional: string[]; options: Options } {
@@ -108,6 +120,7 @@ function parseArgs(args: string[]): { command: string; positional: string[]; opt
     trust: true,
     approveMcps: false,
     browserHarness: false,
+    headless: false,
     pluginDirs: []
   };
   const positional: string[] = [];
@@ -149,6 +162,8 @@ function parseArgs(args: string[]): { command: string; positional: string[]; opt
       options.browserHarness = true;
     } else if (arg === "--no-browser-harness") {
       options.browserHarness = false;
+    } else if (arg === "--headless") {
+      options.headless = true;
     } else if (arg === "--dry-run") {
       options.dryRun = true;
     } else if (arg === "--wait" || arg === "-w") {
@@ -229,6 +244,7 @@ async function startCommand(positional: string[], options: Options): Promise<num
   const uniquePluginDirs = [...new Set(pluginDirs)];
   if (options.dryRun) {
     console.log(`Would send approximately ${estimateTokens(prompt).toLocaleString()} tokens`);
+    console.log(`Execution: ${executionMode(options)}`);
     console.log(`Model: ${options.model}`);
     console.log(`Mode: ${options.mode}`);
     console.log(`Sandbox: ${options.sandbox}`);
@@ -251,10 +267,12 @@ async function startCommand(positional: string[], options: Options): Promise<num
     trust: options.trust,
     approveMcps: options.approveMcps,
     browserHarness: options.browserHarness,
-    pluginDirs: uniquePluginDirs
+    pluginDirs: uniquePluginDirs,
+    executionMode: executionMode(options)
   };
   const job = startJob(startOptions);
   console.log(`Job started: ${job.id}`);
+  console.log(`Execution: ${getJobExecutionMode(job)}`);
   console.log(`Model: ${job.model}`);
   console.log(`Mode: ${job.mode}`);
   console.log(`Sandbox: ${job.sandbox}`);
@@ -278,6 +296,7 @@ function statusCommand(positional: string[]): number {
   console.log(`Model: ${job.model}`);
   console.log(`Mode: ${job.mode}`);
   console.log(`Sandbox: ${job.sandbox}`);
+  console.log(`Execution: ${getJobExecutionMode(job)}`);
   console.log(`Force: ${job.force ? "yes" : "no"}`);
   console.log(`Browser harness: ${job.browserHarness ? "yes" : "no"}`);
   console.log(`Cwd: ${job.cwd}`);
@@ -438,6 +457,10 @@ function normalizeBrowserHarnessSandbox(options: Options): void {
     );
   }
   if (!options.sandboxExplicit) options.sandbox = "disabled";
+}
+
+function executionMode(options: Options): JobExecutionMode {
+  return options.headless ? "headless" : "interactive";
 }
 
 function preflightStart(options: Options): void {
