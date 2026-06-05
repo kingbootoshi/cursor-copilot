@@ -12,7 +12,7 @@ One engine, three modes:
 
 - **Research** - read-only codebase exploration, answers with file:line citations (`--ask` / `--plan`)
 - **Implementation** - scoped build / edit work, verified, with a diff report (`agent`)
-- **QA** - browser-harness E2E testing, returns a PASS/FAIL report with evidence (`--browser-harness`)
+- **QA** - browser-harness E2E testing, with AgentMail available for email OTP / magic-link flows, returns a PASS/FAIL report with evidence (`--browser-harness`)
 
 The skill loads the matching mode reference on demand, so a plain invoke stays lean and "QA" / "research" / "implement" pulls in just that mode's contract.
 
@@ -36,6 +36,7 @@ cursor-pilot
 - Cursor Agent CLI available as `agent`
 - Cursor CLI authenticated with access to `composer-2.5-fast`
 - `browser-harness` available on PATH (QA mode only)
+- AgentMail skill available at `~/.codex/skills/agentmail` (QA mode includes it for OTP / magic-link E2E)
 
 ## Quick Start
 
@@ -63,7 +64,7 @@ cursor-pilot send <jobId> "Follow up in the same live session"
 cursor-pilot start --headless "Return a JSON-friendly one-shot result." --dir . --force
 ```
 
-For browser-harness jobs, `cursor-pilot` automatically runs Cursor Agent with `--sandbox disabled` unless you set `--sandbox` explicitly. This mirrors the browser-harness requirement: sandboxed tool calls can block localhost CDP and turn a healthy Chrome into a silent or misleading failure.
+For browser-harness jobs, `--browser-harness` is a `cursor-pilot` wrapper flag, not a native Cursor Agent flag. The wrapper injects the local browser-harness plugin/skill plus AgentMail skill context and automatically runs Cursor Agent with `--sandbox disabled` unless you set `--sandbox` explicitly. This mirrors the browser-harness requirement: sandboxed tool calls can block localhost CDP and turn a healthy Chrome into a silent or misleading failure.
 
 ## Skill
 
@@ -93,4 +94,4 @@ The runtime wrapper defaults to the local Cursor plugin path:
 ~/.cursor/plugins/local/browser-harness
 ```
 
-Copy or symlink the plugin payload there if the local plugin is missing.
+Copy or symlink the plugin payload there if the local plugin is missing. The plugin's `skills/` directory should contain symlinks to Codex's local `browser-harness` and `agentmail` skills so Cursor QA jobs use the same canonical instructions and scripts as Codex.

@@ -17,11 +17,11 @@ export function isTmuxAvailable(): boolean {
 }
 
 export function sessionExists(sessionName: string): boolean {
-  return spawnSync("tmux", ["has-session", "-t", sessionName], { stdio: "pipe" }).status === 0;
+  return spawnSync("tmux", tmuxArgs(["has-session", "-t", sessionName]), { stdio: "pipe" }).status === 0;
 }
 
 export function listSessions(): TmuxSession[] {
-  const result = spawnSync("tmux", ["list-sessions", "-F", "#{session_name}\t#{session_attached}\t#{session_created_string}"], {
+  const result = spawnSync("tmux", tmuxArgs(["list-sessions", "-F", "#{session_name}\t#{session_attached}\t#{session_created_string}"]), {
     encoding: "utf8",
     stdio: ["pipe", "pipe", "pipe"]
   });
@@ -48,7 +48,7 @@ export function createSession(input: {
     process.platform === "linux"
       ? `script -q -e -c ${shellQuote(launcherCommand)} ${shellQuote(input.logFile)}`
       : `script -q ${shellQuote(input.logFile)} ${launcherCommand}`;
-  const result = spawnSync("tmux", ["new-session", "-d", "-s", sessionName, "-c", input.cwd, command], {
+  const result = spawnSync("tmux", tmuxArgs(["new-session", "-d", "-s", sessionName, "-c", input.cwd, command]), {
     encoding: "utf8",
     stdio: ["pipe", "pipe", "pipe"]
   });
@@ -61,7 +61,7 @@ function agentHomeEnvPrefix(): string {
 }
 
 export function killSession(sessionName: string): boolean {
-  return spawnSync("tmux", ["kill-session", "-t", sessionName], { stdio: "pipe" }).status === 0;
+  return spawnSync("tmux", tmuxArgs(["kill-session", "-t", sessionName]), { stdio: "pipe" }).status === 0;
 }
 
 export function sendMessage(sessionName: string, message: string): boolean {
@@ -71,13 +71,13 @@ export function sendMessage(sessionName: string, message: string): boolean {
   pauseForTuiInput();
   sendKey(sessionName, "C-u");
   pauseForTuiInput();
-  const loaded = spawnSync("tmux", ["load-buffer", "-b", bufferName, "-"], {
+  const loaded = spawnSync("tmux", tmuxArgs(["load-buffer", "-b", bufferName, "-"]), {
     input: message,
     stdio: ["pipe", "pipe", "pipe"]
   });
   if (loaded.status !== 0) return false;
-  const pasted = spawnSync("tmux", ["paste-buffer", "-b", bufferName, "-t", sessionName], { stdio: "pipe" });
-  spawnSync("tmux", ["delete-buffer", "-b", bufferName], { stdio: "pipe" });
+  const pasted = spawnSync("tmux", tmuxArgs(["paste-buffer", "-b", bufferName, "-t", sessionName]), { stdio: "pipe" });
+  spawnSync("tmux", tmuxArgs(["delete-buffer", "-b", bufferName]), { stdio: "pipe" });
   if (pasted.status !== 0) return false;
   pauseForTuiInput();
   sendKey(sessionName, "Enter");
@@ -90,7 +90,7 @@ export function acceptWorkspaceTrust(sessionName: string): boolean {
 }
 
 function sendKey(sessionName: string, key: string): boolean {
-  return spawnSync("tmux", ["send-keys", "-t", sessionName, key], { stdio: "pipe" }).status === 0;
+  return spawnSync("tmux", tmuxArgs(["send-keys", "-t", sessionName, key]), { stdio: "pipe" }).status === 0;
 }
 
 function pauseForTuiInput(): void {
@@ -99,11 +99,15 @@ function pauseForTuiInput(): void {
 
 export function capturePane(sessionName: string, lines?: number): string | null {
   if (!sessionExists(sessionName)) return null;
-  const result = spawnSync("tmux", ["capture-pane", "-t", sessionName, "-p", "-S", "-"], {
+  const result = spawnSync("tmux", tmuxArgs(["capture-pane", "-t", sessionName, "-p", "-S", "-"]), {
     encoding: "utf8",
     stdio: ["pipe", "pipe", "pipe"]
   });
   if (result.status !== 0) return null;
   if (lines === undefined) return result.stdout;
   return result.stdout.split("\n").slice(-lines).join("\n");
+}
+
+function tmuxArgs(args: string[]): string[] {
+  return ["-L", config.tmuxSocketName, ...args];
 }
