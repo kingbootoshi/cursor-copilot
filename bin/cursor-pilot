@@ -10,4 +10,20 @@ done
 SCRIPT_DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-exec bun "${ROOT_DIR}/src/cli.ts" "$@"
+# Ensure bun and tmux resolve even from a non-login shell (e.g. agents
+# invoking cursor-pilot over SSH), where ~/.bun/bin and Homebrew are not on PATH.
+for dir in "$HOME/.bun/bin" /opt/homebrew/bin /usr/local/bin; do
+  case ":$PATH:" in
+    *":$dir:"*) ;;
+    *) [ -d "$dir" ] && PATH="$dir:$PATH" ;;
+  esac
+done
+export PATH
+
+BUN_BIN="$(command -v bun || true)"
+if [ -z "$BUN_BIN" ]; then
+  echo "cursor-pilot: bun not found on PATH or in ~/.bun/bin" >&2
+  exit 127
+fi
+
+exec "$BUN_BIN" "${ROOT_DIR}/src/cli.ts" "$@"
