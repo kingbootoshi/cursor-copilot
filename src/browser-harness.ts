@@ -9,11 +9,13 @@ export function buildBrowserHarnessPrelude(): string {
   const copiedSkill = readIfExists(config.browserHarnessSkillPath);
   const canonicalSkill = readIfExists(config.browserHarnessCanonicalSkillPath);
   const helpersPreview = readIfExists(config.browserHarnessHelpersPath);
+  const agentMailSkill = readIfExists(config.agentMailSkillPath);
 
   const sections = [
     "## Default skill: browser-harness",
     "You have the browser-harness skill by default for browser automation and fast E2E testing.",
     "Use the `browser-harness` CLI for browser work unless the user explicitly asks for a different browser tool.",
+    "You also have the AgentMail skill available for email OTP, magic-link, sign-up, and mailbox polling flows during E2E.",
     "Before invoking the harness for a task, read the canonical local files listed in the copied skill.",
     "",
     "### Copied browser-harness skill",
@@ -23,7 +25,10 @@ export function buildBrowserHarnessPrelude(): string {
     canonicalSkill,
     "",
     "### helpers.py reference",
-    helpersPreview
+    helpersPreview,
+    "",
+    "### AgentMail skill",
+    agentMailSkill
   ].filter((part) => part.length > 0);
 
   return sections.join("\n");

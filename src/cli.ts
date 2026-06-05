@@ -2,6 +2,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { config, isAgentMode, isSandboxMode, sandboxModes, agentModes, type AgentMode, type SandboxMode } from "./config.ts";
 import { estimateTokens, loadCodebaseMap } from "./files.ts";
 import { buildBrowserHarnessPrelude, defaultBrowserHarnessPluginDirs } from "./browser-harness.ts";
@@ -419,7 +420,9 @@ function healthCommand(): number {
   console.log(`browser-harness skill: ${existsSync(config.browserHarnessSkillPath) ? "OK" : "missing"}`);
   console.log(`browser-harness canonical doc: ${existsSync(config.browserHarnessCanonicalSkillPath) ? "OK" : "missing"}`);
   console.log(`browser-harness helpers: ${existsSync(config.browserHarnessHelpersPath) ? "OK" : "missing"}`);
+  console.log(`agentmail skill: ${existsSync(config.agentMailSkillPath) ? "OK" : "missing"}`);
   console.log(`Cursor browser-harness plugin: ${existsSync(config.browserHarnessPluginDir) ? "OK" : "missing"}`);
+  console.log(`Cursor agentmail plugin skill: ${existsSync(join(config.browserHarnessPluginDir, "skills", "agentmail")) ? "OK" : "missing"}`);
   const harness = spawnSync("which", ["browser-harness"], { encoding: "utf8", timeout: 5_000 });
   console.log(harness.status === 0 ? `browser-harness: ${harness.stdout.trim()}` : "browser-harness: missing");
   return tmux.status === 0 && preflight.ok ? 0 : 1;

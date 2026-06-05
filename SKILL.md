@@ -34,7 +34,7 @@ You are the orchestrator. You decide which Cursor subagents to spawn, write thei
 
 - **Fast, bounded, well-scoped work.** Composer 2.5 Fast is quick and cheap. Hand it a tight brief with a clear stopping condition.
 - **Parallel offload.** Spin up a Cursor agent to QA or research while you keep building elsewhere.
-- **Browser QA.** Cursor + browser-harness is the fastest path to real E2E verification (see QA mode).
+- **Browser QA.** Cursor + browser-harness is the fastest path to real E2E verification (see QA mode). QA mode also exposes AgentMail for email OTP, magic-link, sign-up, and mailbox polling flows.
 - **A second model's eyes.** Cursor sees code differently than Codex or Opus.
 
 Keep deep, high-context implementation on Codex. Use Cursor for scoped sub-tasks with a sharp boundary.
@@ -50,6 +50,8 @@ Every run is one of three modes. Read the matching reference file for the brief 
 | **QA** | QA, test, verify, browser, E2E | `references/qa.md` | `agent` | `--browser-harness` |
 
 Default invoke with no mode = read this file, then infer the mode from the task and confirm, or ask which mode fits.
+
+`--browser-harness` is a `cursor-pilot` wrapper flag, not a native Cursor Agent CLI flag. Use it on `cursor-pilot start` for QA / browser jobs so the wrapper injects the local browser-harness Cursor plugin, includes the browser-harness and AgentMail skill context, and passes the right underlying Cursor Agent options. `--force` is also supplied to `cursor-pilot`; the wrapper passes it through to Cursor Agent as force-allow for autonomous tool calls.
 
 ## The Core Loop
 
@@ -105,7 +107,7 @@ Tight boundary + explicit stop condition = a fast agent that returns something y
 - `--ask` = read-only Q&A. `--plan` = planning without edits. Default `agent` = full build.
 - `--dir <path>` sets the working repo. Always set it.
 - `--map` injects `docs/CODEBASE_MAP.md` when present - cheap orientation for research and implementation.
-- `--browser-harness` injects the browser-harness skill + plugin. **Opt-in** - only QA mode needs it. When on, the wrapper auto-disables the Cursor sandbox (browser-harness needs localhost CDP).
+- `--browser-harness` is a Cursor Pilot wrapper flag that injects the browser-harness skill + plugin. The plugin also exposes AgentMail from Codex's local AgentMail skill for OTP and magic-link E2E. **Opt-in** - only QA mode needs it. When on, the wrapper auto-disables the Cursor sandbox (browser-harness needs localhost CDP).
 - `--dry-run` prints the launch summary and prompt preview without spawning. Use it to check token cost and the assembled prompt.
 
 ## Running From Codex / Claude
@@ -120,4 +122,4 @@ Run this when Cursor, tmux, model access, or browser-harness setup is suspect:
 cursor-pilot health
 ```
 
-It verifies tmux, Cursor auth, the default model, and (for QA) browser-harness files, the Cursor plugin, and the `browser-harness` executable. If health reports a Keychain sandbox error, rerun it as an approved/escalated command before dispatching work.
+It verifies tmux, Cursor auth, the default model, and (for QA) browser-harness files, AgentMail skill availability, the Cursor plugin, and the `browser-harness` executable. If health reports a Keychain sandbox error, rerun it as an approved/escalated command before dispatching work.

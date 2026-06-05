@@ -23,6 +23,7 @@ export const config = {
   defaultTimeoutMinutes: Number(process.env.CURSOR_AGENT_TIMEOUT_MINUTES ?? "45"),
   jobsListLimit: Number(process.env.CURSOR_AGENT_JOBS_LIMIT ?? "20"),
   tmuxPrefix: process.env.CURSOR_AGENT_TMUX_PREFIX ?? "cursor-pilot",
+  tmuxSocketName: process.env.CURSOR_AGENT_TMUX_SOCKET_NAME ?? "cursor-pilot",
   agentPath: resolveExecutable(process.env.CURSOR_AGENT_AGENT_PATH ?? "agent"),
   allowBrowserHarnessSandbox: process.env.CURSOR_AGENT_ALLOW_BROWSER_HARNESS_SANDBOX === "1",
   browserHarnessSkillPath:
@@ -34,6 +35,9 @@ export const config = {
   browserHarnessHelpersPath:
     process.env.CURSOR_AGENT_BROWSER_HARNESS_HELPERS ??
     join(homedir(), "dev", "browser-harness", "helpers.py"),
+  agentMailSkillPath:
+    process.env.CURSOR_AGENT_AGENTMAIL_SKILL ??
+    join(homedir(), ".codex", "skills", "agentmail", "SKILL.md"),
   browserHarnessPluginDir: cursorPluginDir
 };
 

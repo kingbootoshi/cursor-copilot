@@ -15,7 +15,7 @@ Stop when: Cursor returns a report that lets you fix a concrete issue, request a
 
 ## The Loop (QA flags)
 
-QA needs `--browser-harness`. The wrapper then auto-disables the Cursor sandbox (browser-harness needs localhost CDP). Never pass `--sandbox enabled` with browser-harness - the wrapper fails fast on that.
+QA needs `--browser-harness` on the `cursor-pilot start` command. This is a Cursor Pilot wrapper flag, not a native Cursor Agent flag: Cursor Pilot consumes it, injects the local browser-harness Cursor plugin plus browser-harness and AgentMail skill context, then runs Cursor Agent with the right underlying options. The wrapper also auto-disables the Cursor sandbox because browser-harness needs localhost CDP. Never pass `--sandbox enabled` with browser-harness - the wrapper fails fast on that.
 
 ```bash
 cursor-pilot start "<qa brief>" --dir /path/to/repo --browser-harness --force
@@ -68,10 +68,12 @@ RETEST NOTES:
 With `--browser-harness`, the Cursor agent receives:
 
 - The local Cursor plugin at `~/.cursor/plugins/local/browser-harness`.
-- The copied browser-harness skill.
+- The symlinked browser-harness skill from Codex's local skill directory.
+- The symlinked AgentMail skill from Codex's local skill directory, for OTP, magic-link, sign-up, and mailbox polling E2E.
 - The canonical browser-harness usage doc and helper reference.
 
 Ask Cursor to use browser-harness for visible browser work, and to capture screenshots or page state whenever the report depends on UI evidence.
+When auth testing needs email, ask Cursor to use AgentMail with the shared `codex-dev-magic-link@agentmail.to` inbox and plus-addressed variants from the AgentMail skill.
 
 ## QA Scope Examples
 
