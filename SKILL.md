@@ -1,8 +1,8 @@
 ---
-name: cursor-orchestrator
-description: Spawn and command Cursor Composer subagents through the local cursor-orch tmux wrapper. Cursor Composer 2.5 Fast is a third subagent army alongside Codex and Opus - fast, cheap, good at bounded scoped work. Use when you want to delegate research (read-only exploration), implementation (scoped build/edit), or QA (browser-harness E2E testing) to Cursor while keeping your own context focused. On invocation pick a MODE - read references/research.md, references/implementation.md, or references/qa.md based on the task. When the user says "QA", "test", or "browser", load references/qa.md. When the user says "research", "explore", or "investigate", load references/research.md. When the user says "implement", "build", or "fix", load references/implementation.md.
+name: cursor-copilot
+description: Spawn and command Cursor Composer subagents through the local cursor-pilot tmux wrapper. Cursor Composer 2.5 Fast is a third subagent army alongside Codex and Opus - fast, cheap, good at bounded scoped work. Use when you want to delegate research (read-only exploration), implementation (scoped build/edit), or QA (browser-harness E2E testing) to Cursor while keeping your own context focused. On invocation pick a MODE - read references/research.md, references/implementation.md, or references/qa.md based on the task. When the user says "QA", "test", or "browser", load references/qa.md. When the user says "research", "explore", or "investigate", load references/research.md. When the user says "implement", "build", or "fix", load references/implementation.md.
 triggers:
-  - cursor-orchestrator
+  - cursor-copilot
   - spawn cursor
   - use cursor
   - delegate to cursor
@@ -13,9 +13,9 @@ triggers:
   - cursor implement
 ---
 
-# Cursor Orchestrator
+# Cursor Copilot
 
-Cursor Composer 2.5 Fast is a subagent army you command through the `cursor-orch` tmux wrapper. Spawn a job, drive its turns, read its output, bring back the result. Same base tech as codex-orchestrator and opus-agent-orchestrator - a different model with different strengths.
+Cursor Composer 2.5 Fast is a subagent army you command through the `cursor-pilot` tmux wrapper. Spawn a job, drive its turns, read its output, bring back the result. Same base tech as codex-orchestrator and opus-agent-orchestrator - a different model with different strengths.
 
 ## The Command Structure
 
@@ -57,28 +57,28 @@ Every mode rides the same loop. The brief and flags differ; the mechanics are id
 
 ```bash
 # 1. Start a job (mode-specific flags - see the reference file)
-cursor-orch start "<brief>" --dir /path/to/repo --force
+cursor-pilot start "<brief>" --dir /path/to/repo --force
 
 # 2. Wait for the turn to finish
-cursor-orch await-turn <jobId>
+cursor-pilot await-turn <jobId>
 
 # 3. Read the result
-cursor-orch capture <jobId> 220 --clean
+cursor-pilot capture <jobId> 220 --clean
 
 # 4. Follow up / retest in the same session
-cursor-orch send <jobId> "<follow-up>"
-cursor-orch await-turn <jobId>
-cursor-orch capture <jobId> 220 --clean
+cursor-pilot send <jobId> "<follow-up>"
+cursor-pilot await-turn <jobId>
+cursor-pilot capture <jobId> 220 --clean
 ```
 
 List and manage running work:
 
 ```bash
-cursor-orch jobs --json        # running and recent jobs
-cursor-orch status <jobId>     # one job's full state
-cursor-orch watch <jobId>      # live-tail output
-cursor-orch kill <jobId>       # stop a job
-cursor-orch clean              # archive old jobs, kill orphaned sessions
+cursor-pilot jobs --json        # running and recent jobs
+cursor-pilot status <jobId>     # one job's full state
+cursor-pilot watch <jobId>      # live-tail output
+cursor-pilot kill <jobId>       # stop a job
+cursor-pilot clean              # archive old jobs, kill orphaned sessions
 ```
 
 ## Writing The Brief (universal rules)
@@ -110,14 +110,14 @@ Tight boundary + explicit stop condition = a fast agent that returns something y
 
 ## Running From Codex / Claude
 
-When you run `cursor-orch` commands, run them as approved/escalated shell commands. Cursor Agent reads macOS Keychain auth, and browser-harness needs localhost CDP access. A sandboxed orchestrator command can make `agent status` fail with `SecItemCopyMatching` and can make browser-harness mis-detect Chrome.
+When you run `cursor-pilot` commands, run them as approved/escalated shell commands. Cursor Agent reads macOS Keychain auth, and browser-harness needs localhost CDP access. A sandboxed orchestrator command can make `agent status` fail with `SecItemCopyMatching` and can make browser-harness mis-detect Chrome.
 
 ## Health Check
 
 Run this when Cursor, tmux, model access, or browser-harness setup is suspect:
 
 ```bash
-cursor-orch health
+cursor-pilot health
 ```
 
 It verifies tmux, Cursor auth, the default model, and (for QA) browser-harness files, the Cursor plugin, and the `browser-harness` executable. If health reports a Keychain sandbox error, rerun it as an approved/escalated command before dispatching work.

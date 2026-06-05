@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="assets/cursor-qa-header.jpeg" alt="Cursor Orchestrator header" width="100%">
+  <img src="assets/cursor-qa-header.jpeg" alt="Cursor Copilot header" width="100%">
 </p>
 
-# Cursor Orchestrator
+# Cursor Copilot
 
-`cursor-orchestrator` packages a skill and a tmux-backed Cursor Agent CLI for commanding Cursor Composer subagents. It's the same base tech as a Codex or Opus orchestrator - spawn a subagent, drive its turns, read its output - pointed at Cursor Composer 2.5 Fast.
+`cursor-copilot` packages a skill and a tmux-backed Cursor Agent CLI for commanding Cursor Composer subagents. It's the same base tech as a Codex or Opus orchestrator - spawn a subagent, drive its turns, read its output - pointed at Cursor Composer 2.5 Fast.
 
 One engine, three modes:
 
@@ -24,7 +24,7 @@ bun link
 This exposes the orchestration CLI:
 
 ```bash
-cursor-orch
+cursor-pilot
 ```
 
 ## Requirements
@@ -37,27 +37,27 @@ cursor-orch
 
 ## Quick Start
 
-Pick a mode and write a bounded brief. When running from Codex/Claude, approve/escalate `cursor-orch` commands - Cursor needs Keychain access for auth, and browser-harness QA needs localhost CDP access.
+Pick a mode and write a bounded brief. When running from Codex/Claude, approve/escalate `cursor-pilot` commands - Cursor needs Keychain access for auth, and browser-harness QA needs localhost CDP access.
 
 ```bash
 # Research (read-only)
-cursor-orch start "Goal: explain how auth tokens flow login -> API client. Read-only, cite file:line." \
+cursor-pilot start "Goal: explain how auth tokens flow login -> API client. Read-only, cite file:line." \
   --dir . --ask --map --force
 
 # Implementation (scoped build)
-cursor-orch start "Goal: add a --json flag to the report command. Verify with jq. Don't touch other commands." \
+cursor-pilot start "Goal: add a --json flag to the report command. Verify with jq. Don't touch other commands." \
   --dir . --map --force
 
 # QA (browser-harness)
-cursor-orch start "Goal: QA http://localhost:3000 with browser-harness. Return RESULT/COVERAGE/EVIDENCE/FAILURES." \
+cursor-pilot start "Goal: QA http://localhost:3000 with browser-harness. Return RESULT/COVERAGE/EVIDENCE/FAILURES." \
   --dir . --browser-harness --force
 
 # Then, for any mode:
-cursor-orch await-turn <jobId>
-cursor-orch capture <jobId> 220 --clean
+cursor-pilot await-turn <jobId>
+cursor-pilot capture <jobId> 220 --clean
 ```
 
-For browser-harness jobs, `cursor-orch` automatically runs Cursor Agent with `--sandbox disabled` unless you set `--sandbox` explicitly. This mirrors the browser-harness requirement: sandboxed tool calls can block localhost CDP and turn a healthy Chrome into a silent or misleading failure.
+For browser-harness jobs, `cursor-pilot` automatically runs Cursor Agent with `--sandbox disabled` unless you set `--sandbox` explicitly. This mirrors the browser-harness requirement: sandboxed tool calls can block localhost CDP and turn a healthy Chrome into a silent or misleading failure.
 
 ## Skill
 
@@ -71,7 +71,7 @@ references/qa.md               # loaded on "QA / test / browser"
 agents/openai.yaml
 ```
 
-Install it into Codex by copying this repository folder to your skills directory, or copy `SKILL.md`, `references/`, and `agents/openai.yaml` into a `cursor-orchestrator` skill folder.
+Install it into Codex by copying this repository folder to your skills directory, or copy `SKILL.md`, `references/`, and `agents/openai.yaml` into a `cursor-copilot` skill folder.
 
 ## Cursor Plugin Payload
 

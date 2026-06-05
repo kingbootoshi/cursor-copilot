@@ -28,11 +28,11 @@ try {
   rawOutput = `${stdout}${stderr}`;
 } catch (cause) {
   errorMessage = cause instanceof Error ? cause.message : String(cause);
-  console.error(`cursor-orch launch failed: ${errorMessage}`);
+  console.error(`cursor-pilot launch failed: ${errorMessage}`);
 }
 
 markJobExited(jobId, exitCode, errorMessage, rawOutput);
-console.log(`\n\n[cursor-orch: Session complete with exit code ${exitCode}. Closing in 5s.]`);
+console.log(`\n\n[cursor-pilot: Session complete with exit code ${exitCode}. Closing in 5s.]`);
 await Bun.sleep(5000);
 
 process.exit(exitCode);

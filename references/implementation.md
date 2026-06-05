@@ -1,4 +1,4 @@
-# Cursor Orchestrator - Implementation Mode
+# Cursor Copilot - Implementation Mode
 
 Delegate scoped build / edit work to Cursor Composer 2.5 Fast. Cursor makes the change, verifies it, and reports what it touched. Best for tight, well-bounded changes - not sprawling high-context refactors (keep those on Codex).
 
@@ -18,17 +18,17 @@ Stop when: Cursor returns a verified change matching the brief, or a clear block
 Default `agent` mode (full edit). No browser-harness. Add `--map` for orientation.
 
 ```bash
-cursor-orch start "<implementation brief>" --dir /path/to/repo --map --force
-cursor-orch await-turn <jobId>
-cursor-orch capture <jobId> 220 --clean
+cursor-pilot start "<implementation brief>" --dir /path/to/repo --map --force
+cursor-pilot await-turn <jobId>
+cursor-pilot capture <jobId> 220 --clean
 ```
 
 Iterate on the same change:
 
 ```bash
-cursor-orch send <jobId> "The typecheck fails on <file>. Fix it without changing the public API, then re-run the check."
-cursor-orch await-turn <jobId>
-cursor-orch capture <jobId> 220 --clean
+cursor-pilot send <jobId> "The typecheck fails on <file>. Fix it without changing the public API, then re-run the check."
+cursor-pilot await-turn <jobId>
+cursor-pilot capture <jobId> 220 --clean
 ```
 
 ## The Implementation Brief
@@ -60,7 +60,7 @@ BLOCKERS: <if BLOCKED, exactly what and why>
 Add a focused feature:
 
 ```bash
-cursor-orch start "Goal: Add a --json flag to the 'report' command in this CLI.
+cursor-pilot start "Goal: Add a --json flag to the 'report' command in this CLI.
 
 Success means:
 - 'report --json' prints valid JSON of the same data the human format shows
@@ -77,7 +77,7 @@ Return RESULT, CHANGE, FILES, VERIFICATION, NOTES, BLOCKERS." \
 Fix a bug from a QA report:
 
 ```bash
-cursor-orch start "Goal: Fix the empty-state crash in the dashboard.
+cursor-pilot start "Goal: Fix the empty-state crash in the dashboard.
 
 Repro: loading /dashboard with zero projects throws 'cannot read length of undefined' in DashboardList.
 

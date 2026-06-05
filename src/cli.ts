@@ -45,22 +45,22 @@ interface Options {
   pluginDirs: string[];
 }
 
-const HELP = `Cursor Orchestrator - tmux-backed Cursor Composer subagents
+const HELP = `Cursor Copilot - tmux-backed Cursor Composer subagents
 
 Usage:
-  cursor-orch start "prompt" [options]
-  cursor-orch status <jobId>
-  cursor-orch await-turn <jobId>
-  cursor-orch send <jobId> "message"
-  cursor-orch capture <jobId> [lines] [--clean]
-  cursor-orch output <jobId> [--clean]
-  cursor-orch jobs [--json] [--all]
-  cursor-orch sessions
-  cursor-orch attach <jobId>
-  cursor-orch watch <jobId>
-  cursor-orch kill <jobId>
-  cursor-orch clean
-  cursor-orch health
+  cursor-pilot start "prompt" [options]
+  cursor-pilot status <jobId>
+  cursor-pilot await-turn <jobId>
+  cursor-pilot send <jobId> "message"
+  cursor-pilot capture <jobId> [lines] [--clean]
+  cursor-pilot output <jobId> [--clean]
+  cursor-pilot jobs [--json] [--all]
+  cursor-pilot sessions
+  cursor-pilot attach <jobId>
+  cursor-pilot watch <jobId>
+  cursor-pilot kill <jobId>
+  cursor-pilot clean
+  cursor-pilot health
 
 Defaults:
   model: ${config.defaultModel}
@@ -262,9 +262,9 @@ async function startCommand(positional: string[], options: Options): Promise<num
   console.log(`Browser harness: ${job.browserHarness ? "yes" : "no"}`);
   console.log(`Working dir: ${job.cwd}`);
   console.log(`tmux session: ${job.tmuxSession}`);
-  console.log(`Capture: cursor-orch capture ${job.id} --clean`);
-  console.log(`Await: cursor-orch await-turn ${job.id}`);
-  console.log(`Send: cursor-orch send ${job.id} "message"`);
+  console.log(`Capture: cursor-pilot capture ${job.id} --clean`);
+  console.log(`Await: cursor-pilot await-turn ${job.id}`);
+  console.log(`Send: cursor-pilot send ${job.id} "message"`);
   if (options.wait) return await awaitTurnCommand([job.id]);
   return job.status === "running" ? 0 : 1;
 }
@@ -357,7 +357,7 @@ function jobsCommand(options: Options): number {
 function sessionsCommand(): number {
   const sessions = listSessions();
   if (sessions.length === 0) {
-    console.log("No active cursor-orch sessions");
+    console.log("No active cursor-pilot sessions");
     return 0;
   }
   for (const session of sessions) console.log(`${session.name}\tattached=${session.attached ? "yes" : "no"}\t${session.created}`);
@@ -411,7 +411,7 @@ function healthCommand(): number {
   const preflight = checkCursorAgent(config.agentPath, config.defaultModel);
   if (preflight.auth.combined) console.log(`auth: ${preflight.auth.combined}`);
   if (preflight.sandboxBlocked) {
-    console.log("auth guidance: blocked by macOS Keychain sandbox; rerun cursor-orch health as an approved/escalated Codex command.");
+    console.log("auth guidance: blocked by macOS Keychain sandbox; rerun cursor-pilot health as an approved/escalated Codex command.");
     console.log(`model ${config.defaultModel}: not checked because auth is sandbox-blocked`);
   } else {
     console.log(`model ${config.defaultModel}: ${preflight.hasModel ? "OK" : "missing"}`);
@@ -432,7 +432,7 @@ function normalizeBrowserHarnessSandbox(options: Options): void {
       [
         "browser-harness QA cannot run with Cursor Agent sandbox enabled.",
         "The harness needs localhost CDP access, and sandboxed Cursor tool calls can mis-detect Chrome and hang or fail.",
-        "Use --sandbox disabled, omit --sandbox so cursor-orch can choose the QA default, or pass --no-browser-harness for non-browser work.",
+        "Use --sandbox disabled, omit --sandbox so cursor-pilot can choose the QA default, or pass --no-browser-harness for non-browser work.",
         "Set CURSOR_AGENT_ALLOW_BROWSER_HARNESS_SANDBOX=1 only when intentionally testing sandbox failure behavior."
       ].join("\n")
     );

@@ -1,4 +1,4 @@
 interface:
-  display_name: "Cursor Orchestrator"
+  display_name: "Cursor Copilot"
   short_description: "Spawn and drive Cursor Composer subagents for research, implementation, and QA"
-  default_prompt: "Use $cursor-orchestrator to spawn a Cursor Composer subagent. Pick a mode - research (read-only), implementation (build), or QA (browser-harness) - write a bounded brief, drive the turn loop, and bring back the result."
+  default_prompt: "Use $cursor-copilot to spawn a Cursor Composer subagent. Pick a mode - research (read-only), implementation (build), or QA (browser-harness) - write a bounded brief, drive the turn loop, and bring back the result."

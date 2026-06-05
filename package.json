@@ -1,10 +1,10 @@
 {
-  "name": "cursor-orchestrator",
+  "name": "cursor-copilot",
   "version": "0.2.0",
   "description": "Skill and tmux-backed orchestrator for Cursor Composer subagents - research, implementation, and QA",
   "type": "module",
   "bin": {
-    "cursor-orch": "bin/cursor-orch"
+    "cursor-pilot": "bin/cursor-pilot"
   },
   "scripts": {
     "check": "tsc --noEmit",

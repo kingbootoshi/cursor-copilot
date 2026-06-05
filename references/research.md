@@ -1,4 +1,4 @@
-# Cursor Orchestrator - Research Mode
+# Cursor Copilot - Research Mode
 
 Delegate read-only codebase exploration and investigation to Cursor Composer 2.5 Fast. Cursor reads the code, traces the paths, and returns a grounded answer with file:line citations - no edits.
 
@@ -18,17 +18,17 @@ Stop when: Cursor returns an answer with citations that resolves the question.
 Research is read-only. Use `--ask` for direct Q&A or `--plan` for "investigate then propose an approach". No browser-harness. Add `--map` so Cursor orients fast when `docs/CODEBASE_MAP.md` exists.
 
 ```bash
-cursor-orch start "<research brief>" --dir /path/to/repo --ask --map --force
-cursor-orch await-turn <jobId>
-cursor-orch capture <jobId> 220 --clean
+cursor-pilot start "<research brief>" --dir /path/to/repo --ask --map --force
+cursor-pilot await-turn <jobId>
+cursor-pilot capture <jobId> 220 --clean
 ```
 
 Drill deeper in the same session:
 
 ```bash
-cursor-orch send <jobId> "Now trace where <X> is consumed. List every call site with file:line."
-cursor-orch await-turn <jobId>
-cursor-orch capture <jobId> 220 --clean
+cursor-pilot send <jobId> "Now trace where <X> is consumed. List every call site with file:line."
+cursor-pilot await-turn <jobId>
+cursor-pilot capture <jobId> 220 --clean
 ```
 
 ## The Research Brief
@@ -56,7 +56,7 @@ OPEN QUESTIONS: <what to ask next>
 Trace a data flow:
 
 ```bash
-cursor-orch start "Goal: Explain how auth tokens flow from login to the API client in this repo. Read-only.
+cursor-pilot start "Goal: Explain how auth tokens flow from login to the API client in this repo. Read-only.
 
 Success means:
 - You identify where the token is created, stored, and attached to requests
@@ -72,7 +72,7 @@ Return ANSWER, EVIDENCE, RELATED, UNKNOWNS, OPEN QUESTIONS." \
 Scope a change before implementing:
 
 ```bash
-cursor-orch start "Goal: Find every place that would need to change to add a new 'archived' status to projects. Read-only, propose a plan.
+cursor-pilot start "Goal: Find every place that would need to change to add a new 'archived' status to projects. Read-only, propose a plan.
 
 Success means:
 - You list each file and function that touches project status

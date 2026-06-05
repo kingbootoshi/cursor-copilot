@@ -1,4 +1,4 @@
-# Cursor Orchestrator - QA Mode
+# Cursor Copilot - QA Mode
 
 Delegate QA and fast browser-harness E2E testing to Cursor Composer 2.5 Fast. Cursor exercises the UI or browser workflow like a user and returns a structured report you can act on.
 
@@ -18,18 +18,18 @@ Stop when: Cursor returns a report that lets you fix a concrete issue, request a
 QA needs `--browser-harness`. The wrapper then auto-disables the Cursor sandbox (browser-harness needs localhost CDP). Never pass `--sandbox enabled` with browser-harness - the wrapper fails fast on that.
 
 ```bash
-cursor-orch start "<qa brief>" --dir /path/to/repo --browser-harness --force
-cursor-orch await-turn <jobId>
-cursor-orch capture <jobId> 220 --clean
-cursor-orch status <jobId>
+cursor-pilot start "<qa brief>" --dir /path/to/repo --browser-harness --force
+cursor-pilot await-turn <jobId>
+cursor-pilot capture <jobId> 220 --clean
+cursor-pilot status <jobId>
 ```
 
 Retest after a fix - same session, same brief:
 
 ```bash
-cursor-orch send <jobId> "Retest the same brief against the updated app. Report only current failures and changed evidence."
-cursor-orch await-turn <jobId>
-cursor-orch capture <jobId> 220 --clean
+cursor-pilot send <jobId> "Retest the same brief against the updated app. Report only current failures and changed evidence."
+cursor-pilot await-turn <jobId>
+cursor-pilot capture <jobId> 220 --clean
 ```
 
 ## The QA Brief
@@ -78,7 +78,7 @@ Ask Cursor to use browser-harness for visible browser work, and to capture scree
 Smoke test a local app:
 
 ```bash
-cursor-orch start "Goal: QA the onboarding flow at http://localhost:3000 with browser-harness.
+cursor-pilot start "Goal: QA the onboarding flow at http://localhost:3000 with browser-harness.
 
 Success means:
 - The landing screen loads without console-visible blocking errors
@@ -95,7 +95,7 @@ Return RESULT, TARGET, COVERAGE, EVIDENCE, FAILURES, REPRODUCTION, RETEST NOTES.
 Retest a fixed failure:
 
 ```bash
-cursor-orch send <jobId> "Retest the failed validation path. Use the same URL and browser-harness flow. Return PASS if the previous failure is gone, otherwise return FAIL with updated reproduction steps."
+cursor-pilot send <jobId> "Retest the failed validation path. Use the same URL and browser-harness flow. Return PASS if the previous failure is gone, otherwise return FAIL with updated reproduction steps."
 ```
 
 ## Report Triage
