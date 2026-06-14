@@ -12,7 +12,7 @@ This fixes the concrete complaint: today the QA pane is blank because the wrappe
 
 The hardest part — detecting when an interactive turn is done — depends on what the real TUI renders. The current design equates "turn complete" with "process exited" (`markJobExited` in `src/jobs.ts`). An interactive TUI never exits between turns; it returns to an idle input prompt. So you must build turn-detection against the **observed** TUI, not assumptions.
 
-Auth note: build and probe on THIS local machine, where the macOS keychain is unlocked in the GUI session and `agent` is authenticated (`agent status` → logged in as logged in). Do NOT try to solve SSH/mini keychain here — out of scope.
+Auth note: build and probe on THIS local machine, where the macOS keychain is unlocked in the GUI session and `agent` is authenticated (`agent status` → logged in). Do NOT try to solve SSH/mini keychain here — out of scope.
 
 Open a scratch tmux session and drive a real interactive `agent` by hand (via `tmux send-keys` + `tmux capture-pane`). Document in your ledger, with captured pane evidence:
 
