@@ -7,7 +7,8 @@
     "cursor-pilot": "bin/cursor-pilot"
   },
   "scripts": {
-    "check": "tsc --noEmit",
+    "check:deps": "bun scripts/check-exact-deps.mjs",
+    "check": "bun run check:deps && tsc --noEmit",
     "test": "bun test",
     "start": "bun run src/cli.ts"
   },
